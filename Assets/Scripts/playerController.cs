@@ -36,7 +36,6 @@ public class playerController : MonoBehaviour
 
         Vector3 move = new Vector3(moveInput.x, 0f, moveInput.y).normalized;
         move.y = verticalVelocity / speed;
-
         controller.Move(move * speed * Time.deltaTime);
     }
 
@@ -52,6 +51,10 @@ public class playerController : MonoBehaviour
         {
             jumpPressed = true;
         }
+    }
+    public void SetSpawnPoint(Transform newSpawnPoint)
+    {
+        spawnPoint = newSpawnPoint;
     }
 
     public void Die()
