@@ -7,6 +7,8 @@ public class playerController : MonoBehaviour
     public float gravity = -20f;
     public float jumpHeight = 2f;
     public Transform spawnPoint;
+    private float respawnHeightoffset = 1.5f; // Offset para evitar que el jugador quede atrapado en el suelo al reaparecer
+    public float rotationSpeed = 10f; // Velocidad de rotación del jugador
     private CharacterController controller;
     private Vector2 moveInput;
     private float verticalVelocity;
@@ -34,8 +36,17 @@ public class playerController : MonoBehaviour
 
         verticalVelocity += gravity * Time.deltaTime;
 
-        Vector3 move = new Vector3(moveInput.x, 0f, moveInput.y).normalized;
-        move.y = verticalVelocity / speed;
+        Vector3 moveDirection = new Vector3(moveInput.x, 0f, moveInput.y);
+        if(moveDirection.magnitude > 0.1f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+        }
+
+        Vector3 move = moveDirection.normalized;
+        move.y= verticalVelocity / speed;
+
+
         controller.Move(move * speed * Time.deltaTime);
     }
 
@@ -60,7 +71,8 @@ public class playerController : MonoBehaviour
     public void Die()
     {
         controller.enabled = false;
-        transform.position = spawnPoint.position;
+        Vector3 respawnPosition = spawnPoint.position + Vector3.up * respawnHeightoffset;
+        transform.position = respawnPosition;
         verticalVelocity = 0f;
         controller.enabled = true;
     }
