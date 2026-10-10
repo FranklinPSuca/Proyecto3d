@@ -1,28 +1,38 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class playerController : MonoBehaviour
 {
-    public float speed = 5;
+    public float speed = 5f;
     public float gravity = -20f;
     public float jumpHeight = 2f;
     public Transform spawnPoint;
-    private float respawnHeightoffset = 1.5f; // Offset para evitar que el jugador quede atrapado en el suelo al reaparecer
-    public float rotationSpeed = 10f; // Velocidad de rotación del jugador
+    public float rotationSpeed = 10f;
+
+    public Transform cameraTransform;
+
+    private float respawnHeightoffset = 1.5f;
     private CharacterController controller;
     private Vector2 moveInput;
     private float verticalVelocity;
     private bool jumpPressed;
- 
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
+
+        // Buscar la camara si no se asigno manualmente
+        if (cameraTransform == null && Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+        }
     }
 
-    // Update is called once per frame
     void Update()
     {
         bool isGrounded = controller.isGrounded;
+
         if (isGrounded && verticalVelocity < 0)
         {
             verticalVelocity = -2f;
@@ -36,24 +46,44 @@ public class playerController : MonoBehaviour
 
         verticalVelocity += gravity * Time.deltaTime;
 
-        Vector3 moveDirection = new Vector3(moveInput.x, 0f, moveInput.y);
-        if(moveDirection.magnitude > 0.1f)
+        // Direcciones horizontales de la camara
+        Vector3 cameraForward = cameraTransform.forward;
+        Vector3 cameraRight = cameraTransform.right;
+
+        // Evitar que la inclinacion de la camara afecte el movimiento
+        cameraForward.y = 0f;
+        cameraRight.y = 0f;
+
+        cameraForward.Normalize();
+        cameraRight.Normalize();
+
+        // Movimiento relativo a la camara
+        Vector3 moveDirection =
+            cameraRight * moveInput.x +
+            cameraForward * moveInput.y;
+
+        if (moveDirection.magnitude > 0.1f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            Quaternion targetRotation =
+                Quaternion.LookRotation(moveDirection);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
         }
 
-        Vector3 move = moveDirection.normalized;
-        move.y= verticalVelocity / speed;
+        // Separar el movimiento horizontal de la gravedad
+        Vector3 move = moveDirection.normalized * speed;
+        move.y = verticalVelocity;
 
-
-        controller.Move(move * speed * Time.deltaTime);
+        controller.Move(move * Time.deltaTime);
     }
 
     public void OnMove(InputValue value)
     {
         moveInput = value.Get<Vector2>();
-        //Debug.Log("OnMove Llamado." + moveInput);
     }
 
     public void OnJump(InputValue value)
@@ -63,6 +93,7 @@ public class playerController : MonoBehaviour
             jumpPressed = true;
         }
     }
+
     public void SetSpawnPoint(Transform newSpawnPoint)
     {
         spawnPoint = newSpawnPoint;
@@ -70,10 +101,16 @@ public class playerController : MonoBehaviour
 
     public void Die()
     {
+        if (spawnPoint == null) return;
+
         controller.enabled = false;
-        Vector3 respawnPosition = spawnPoint.position + Vector3.up * respawnHeightoffset;
+
+        Vector3 respawnPosition =
+            spawnPoint.position + Vector3.up * respawnHeightoffset;
+
         transform.position = respawnPosition;
         verticalVelocity = 0f;
+
         controller.enabled = true;
     }
 }
